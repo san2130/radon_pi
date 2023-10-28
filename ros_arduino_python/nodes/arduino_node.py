@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
     A ROS Node for the Arduino microcontroller
@@ -26,7 +26,7 @@ from ros_arduino_msgs.srv import *
 from ros_arduino_python.base_controller import BaseController
 from geometry_msgs.msg import Twist
 import os, time
-import thread
+import _thread
 from serial.serialutil import SerialException
 
 class ArduinoROS():
@@ -99,7 +99,7 @@ class ArduinoROS():
         rospy.loginfo("Connected to Arduino on port " + self.port + " at " + str(self.baud) + " baud")
 
         # Reserve a thread lock
-        mutex = thread.allocate_lock()
+        mutex = _thread.allocate_lock()
 
         # Initialize any sensors
         self.mySensors = list()
@@ -169,7 +169,9 @@ class ArduinoROS():
                     pass
 
                 self.t_next_sensors = now + self.t_delta_sensors
+            
 
+            # print(self.controller.get_baud())
             r.sleep()
 
     # Service callback functions
