@@ -28,6 +28,7 @@ import time
 import sys, traceback
 from serial.serialutil import SerialException
 from serial import Serial
+from pySerialTransfer import pySerialTransfer as txfer
 
 SERVO_MAX = 180
 SERVO_MIN = 0
@@ -62,18 +63,11 @@ class Arduino:
     def connect(self):
         try:
             print("Connecting to Arduino on port", self.port, "...")
-            self.port = Serial(port=self.port, baudrate=self.baudrate, timeout=self.timeout, writeTimeout=self.writeTimeout)
-            # The next line is necessary to give the firmware time to wake up.
-            if(self.port.is_open):
-                print("Connected")   
-            time.sleep(1)
+            self.port = txfer.SerialTransfer(port=self.port, baud=57600, timeout = 1)
+            self.port.open()
+            # The next line is necessary to give the firmware time to wake up.   
+            time.sleep(2)
             test = self.get_baud()
-            print(test)
-            # if test != self.baudrate:
-            #     time.sleep(1)
-            #     test = self.get_baud()
-            #     if test != self.baudrate:
-            #         raise SerialException
             print("Connected at", self.baudrate)
             print("Arduino is ready.")
 
@@ -95,79 +89,49 @@ class Arduino:
         '''
         self.port.close()
 
-    def send(self, cmd):
-        ''' This command should not be used on its own: it is called by the execute commands
-            below in a _thread safe manner.
-        '''
-        self.port.write((cmd + '\r').encode())
-
     def recv(self, timeout=0.5):
         timeout = min(timeout, self.timeout)
         ''' This command should not be used on its own: it is called by the execute commands
             below in a _thread safe manner.  Note: we use read() instead of readline() since
             readline() tends to return garbage characters from the Arduino
         '''
-        c = ''
-        value = ''
-        attempts = 0
-        while c != '\n':
-            c = self.port.read(1).decode()
-            print(c)
-            value += c
-            attempts += 1
-            if attempts * self.interCharTimeout > timeout:
-                return None
+        while not self.port.available():
+                if self.port.status < 0:
+                    if self.port.status == txfer.CRC_ERROR:
+                        print('ERROR: CRC_ERROR')
+                    elif self.port.status == txfer.PAYLOAD_ERROR:
+                        print('ERROR: PAYLOAD_ERROR')
+                    elif self.port.status == txfer.STOP_BYTE_ERROR:
+                        print('ERROR: STOP_BYTE_ERROR')
+                    else:
+                        print('ERROR: {}'.format(self.port.status))
 
-        value = value.strip('\r')
-        print("Value",value)
-        return value
-
-    def recv_ack(self):
-        ''' This command should not be used on its own: it is called by the execute commands
-            below in a _thread safe manner.
-        '''
-        ack = self.recv(self.timeout)
-        return ack == 'OK'
-
-    def recv_int(self):
-        ''' This command should not be used on its own: it is called by the execute commands
-            below in a _thread safe manner.
-        '''
-        value = self.recv(self.timeout)
-        try:
-            return int(value)
-        except:
-            return None
-
-    def recv_array(self):
-        ''' This command should not be used on its own: it is called by the execute commands
-            below in a _thread safe manner.
-        '''
-        try:
-            values = self.recv(self.timeout * self.N_ANALOG_PORTS).split()
-            return map(int, values)
-        except:
-            return []
+        rec_str_   = self.port.rx_obj(obj_type=type("a"),
+                                     obj_byte_size=20,
+                                     )
+        # print('RCVD:',rec_str_)
+        return rec_str_
 
     def execute(self, cmd):
         ''' _thread safe execution of "cmd" on the Arduino returning a single integer value.
         '''
         self.mutex.acquire()
 
-        self.port.flush()
-
-
         ntries = 1
         attempts = 0
         try:
-            self.port.write((cmd + '\r').encode())
-            print("hll")
+            send_size = 0
+            str_size = self.port.tx_obj(cmd + '\r', send_size) - send_size
+            send_size += str_size
+            self.port.send(send_size)
             value = self.recv(self.timeout)
-            print("hll2")
-            while attempts < ntries and (value == '' or value == 'Invalid Command' or value == None):
+            while attempts < ntries and (value == '' or value == 'ER' or value == None):
                 try:
-                    self.port.flushInput()
-                    self.port.write(cmd + '\r')
+                    print("Sending again")
+                    send_size = 0
+                    str_size = self.port.tx_obj(cmd, send_size) - send_size
+                    send_size += str_size
+                    self.port.send(send_size)
                     value = self.recv(self.timeout)
                 except:
                     print("Exception executing command: " + cmd)
@@ -178,120 +142,41 @@ class Arduino:
             value = None
 
         self.mutex.release()
-        return int(value)
-
-    def execute_array(self, cmd):
-        ''' _thread safe execution of "cmd" on the Arduino returning an array.
-        '''
-        self.mutex.acquire()
-
-        try:
-            self.port.flushInput()
-        except:
-            pass
-
-        ntries = 1
-        attempts = 0
-
-        try:
-            self.port.write((cmd + '\r').encode())
-            values = self.recv_array()
-            while attempts < ntries and (values == '' or values == 'Invalid Command' or values == [] or values == None):
-                try:
-                    self.port.flushInput()
-                    self.port.write((cmd + '\r').encode())
-                    values = self.recv_array()
-                except:
-                    print("Exception executing command: " + cmd)
-                attempts += 1
-        except:
-            self.mutex.release()
-            print("Exception executing command: " + cmd)
-            raise SerialException
-            return []
-
-        try:
-            values = map(int, values)
-        except:
-            values = []
-
-        self.mutex.release()
-        return values
-
-    def execute_ack(self, cmd):
-        ''' Thread safe execution of "cmd" on the Arduino returning True if response is ACK.
-        '''
-        self.mutex.acquire()
-
-        try:
-            self.port.flushInput()
-        except:
-            pass
-
-        ntries = 1
-        attempts = 0
-
-        try:
-            self.port.write((cmd + '\r').encode())
-            ack = self.recv(self.timeout)
-            while attempts < ntries and (ack == '' or ack == 'Invalid Command' or ack == None):
-                try:
-                    self.port.flushInput()
-                    self.port.write((cmd + '\r').encode())
-                    ack = self.recv(self.timeout)
-                except:
-                    print("Exception executing command: " + cmd)
-            attempts += 1
-        except:
-            self.mutex.release()
-            print("execute_ack exception when executing", cmd)
-            print(sys.exc_info())
-            return 0
-
-        self.mutex.release()
-        return ack == 'OK'
+        return value
 
     def update_pid(self, Kp, Kd, Ki, Ko):
         ''' Set the PID parameters on the Arduino
         '''
         print("Updating PID parameters")
         cmd = 'u ' + str(Kp) + ':' + str(Kd) + ':' + str(Ki) + ':' + str(Ko)
-        self.execute_ack(cmd)
+        self.execute(cmd)
 
     def get_baud(self):
         ''' Get the current baud rate on the serial port.
         '''
         try:
             x=self.execute('b')
-            print(x)
-            return int(x)
+            return x
         except:
             return None
 
     def get_encoder_counts(self):
-        values = self.execute_array('e')
-        if len(values) != 2:
-            print("Encoder count was not 2")
-            raise SerialException
-            return None
-        else:
-            if self.motors_reversed:
-                values[0], values[1] = -values[0], -values[1]
-            return values
+        values = self.execute('e')
+        return values
 
     def reset_encoders(self):
         ''' Reset the encoder counts to 0
         '''
-        return self.execute_ack('r')
+        return self.execute('r')[0:2]=="OK"
 
     def drive(self, right, left):
         ''' Speeds are given in encoder ticks per PID interval
         '''
         if self.motors_reversed:
             left, right = -left, -right
-        return self.execute_ack('m %d %d' %(right, left))
+        return self.execute('m %d %d' %(right, left))[0:2]=="OK"
 
-    def drive_m_per_s(self, right, left):
+    def drive_closed(self, right, left):
         ''' Set the motor speeds in meters per second.
         '''
         left_revs_per_second = float(left) / (self.wheel_diameter * PI)
@@ -300,12 +185,17 @@ class Arduino:
         left_ticks_per_loop = int(left_revs_per_second * self.encoder_resolution * self.PID_INTERVAL * self.gear_reduction)
         right_ticks_per_loop  = int(right_revs_per_second * self.encoder_resolution * self.PID_INTERVAL * self.gear_reduction)
 
-        self.drive(right_ticks_per_loop , left_ticks_per_loop )
+        return self.drive(right_ticks_per_loop , left_ticks_per_loop )
+    
+    def drive_raw(self, right, left):
+        return self.execute('o %d %d' %(right, left))[0:2] == "OK"
 
     def stop(self):
         ''' Stop both motors.
         '''
-        self.drive(0, 0)
+        msg=self.drive(0, 0)
+        if(msg):
+            print("Stopped successfully")
 
     def analog_read(self, pin):
         return self.execute('a %d' %pin)
@@ -339,47 +229,4 @@ class Arduino:
             connected to the General Purpose I/O line pinId for a distance,
             and returns the range in cm.  Sonar distance resolution is integer based.
         '''
-        return self.execute('p %d' %pin);
-
-#    def get_maxez1(self, triggerPin, outputPin):
-#        ''' The maxez1 command queries a Maxbotix MaxSonar-EZ1 sonar
-#            sensor connected to the General Purpose I/O lines, triggerPin, and
-#            outputPin, for a distance, and returns it in Centimeters. NOTE: MAKE
-#            SURE there's nothing directly in front of the MaxSonar-EZ1 upon
-#            power up, otherwise it wont range correctly for object less than 6
-#            inches away! The sensor reading defaults to use English units
-#            (inches). The sensor distance resolution is integer based. Also, the
-#            maxsonar trigger pin is RX, and the echo pin is PW.
-#        '''
-#        return self.execute('z %d %d' %(triggerPin, outputPin))
-
-
-""" Basic test for connectivity """
-if __name__ == "__main__":
-    if os.name == "posix":
-        portName = "/dev/ttyACM0"
-    else:
-        portName = "COM43" # Windows style COM port.
-
-    baudRate = 57600
-
-    myArduino = Arduino(port=portName, baudrate=baudRate, timeout=0.5)
-    myArduino.connect()
-
-    print("Sleeping for 1 second...")
-    time.sleep(1)
-
-    print("Reading on analog port 0", myArduino.analog_read(0))
-    print("Reading on digital port 0", myArduino.digital_read(0))
-    print("Blinking the LED 3 times")
-    for i in range(3):
-        myArduino.digital_write(13, 1)
-        time.sleep(1.0)
-    #print "Current encoder counts", myArduino.encoders()
-
-    print("Connection test successful.")
-
-    myArduino.stop()
-    myArduino.close()
-
-    print("Shutting down Arduino.")
+        return self.execute('p %d' %pin)

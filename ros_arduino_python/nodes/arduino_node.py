@@ -48,26 +48,15 @@ class ArduinoROS():
         self.rate = int(rospy.get_param("~rate", 50))
         r = rospy.Rate(self.rate)
 
-        # Rate at which summary SensorState message is published. Individual sensors publish
-        # at their own rates.
-        self.sensorstate_rate = int(rospy.get_param("~sensorstate_rate", 10))
-
-        self.use_base_controller = rospy.get_param("~use_base_controller", False)
-
         # Set up the time for publishing the next SensorState message
         now = rospy.Time.now()
-        self.t_delta_sensors = rospy.Duration(1.0 / self.sensorstate_rate)
-        self.t_next_sensors = now + self.t_delta_sensors
 
         # Initialize a Twist message
         self.cmd_vel = Twist()
 
         # A cmd_vel publisher so we can stop the robot when shutting down
-        self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=5)
-
-        # The SensorState publisher periodically publishes the values of all sensors on
-        # a single topic.
-        self.sensorStatePub = rospy.Publisher('~sensor_state', SensorState, queue_size=5)
+        # self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=5)
+        self.cmd_vel_sub = rospy.Subscriber('cmd_vel', Twist, queue_size=1, callback=self.vel_set)
 
         # A service to position a PWM servo
         rospy.Service('~servo_write', ServoWrite, self.ServoWriteHandler)
@@ -101,78 +90,15 @@ class ArduinoROS():
         # Reserve a thread lock
         mutex = _thread.allocate_lock()
 
-        # Initialize any sensors
-        self.mySensors = list()
-
-        sensor_params = rospy.get_param("~sensors", dict({}))
-
-        for name, params in sensor_params.iteritems():
-            # Set the direction to input if not specified
-            try:
-                params['direction']
-            except:
-                params['direction'] = 'input'
-
-            if params['type'] == "Ping":
-                sensor = Ping(self.controller, name, params['pin'], params['rate'], self.base_frame)
-            elif params['type'] == "GP2D12":
-                sensor = GP2D12(self.controller, name, params['pin'], params['rate'], self.base_frame)
-            elif params['type'] == 'Digital':
-                sensor = DigitalSensor(self.controller, name, params['pin'], params['rate'], self.base_frame, direction=params['direction'])
-            elif params['type'] == 'Analog':
-                sensor = AnalogSensor(self.controller, name, params['pin'], params['rate'], self.base_frame, direction=params['direction'])
-            elif params['type'] == 'PololuMotorCurrent':
-                sensor = PololuMotorCurrent(self.controller, name, params['pin'], params['rate'], self.base_frame)
-            elif params['type'] == 'PhidgetsVoltage':
-                sensor = PhidgetsVoltage(self.controller, name, params['pin'], params['rate'], self.base_frame)
-            elif params['type'] == 'PhidgetsCurrent':
-                sensor = PhidgetsCurrent(self.controller, name, params['pin'], params['rate'], self.base_frame)
-
-#                if params['type'] == "MaxEZ1":
-#                    self.sensors[len(self.sensors)]['trigger_pin'] = params['trigger_pin']
-#                    self.sensors[len(self.sensors)]['output_pin'] = params['output_pin']
-            try:
-                self.mySensors.append(sensor)
-                rospy.loginfo(name + " " + str(params) + " published on topic " + rospy.get_name() + "/sensor/" + name)
-            except:
-                rospy.logerr("Sensor type " + str(params['type']) + " not recognized.")
-
-        # Initialize the base controller if used
-        if self.use_base_controller:
-            self.myBaseController = BaseController(self.controller, self.base_frame, self.name + "_base_controller")
-
         # Start polling the sensors and base controller
         while not rospy.is_shutdown():
-            for sensor in self.mySensors:
-                mutex.acquire()
-                sensor.poll()
-                mutex.release()
 
-            if self.use_base_controller:
-                mutex.acquire()
-                self.myBaseController.poll()
-                mutex.release()
-
-            # Publish all sensor values on a single topic for convenience
-            now = rospy.Time.now()
-
-            if now > self.t_next_sensors:
-                msg = SensorState()
-                msg.header.frame_id = self.base_frame
-                msg.header.stamp = now
-                for i in range(len(self.mySensors)):
-                    msg.name.append(self.mySensors[i].name)
-                    msg.value.append(self.mySensors[i].value)
-                try:
-                    self.sensorStatePub.publish(msg)
-                except:
-                    pass
-
-                self.t_next_sensors = now + self.t_delta_sensors
-            
-
-            # print(self.controller.get_baud())
             r.sleep()
+
+    
+    def vel_set(self,data):
+        msg=self.controller.drive(data.linear.x,data.linear.y)
+        if(msg): print("Sent",data.linear.x, data.linear.y)
 
     # Service callback functions
     def ServoWriteHandler(self, req):
@@ -209,7 +135,7 @@ class ArduinoROS():
         # Stop the robot
         try:
             rospy.loginfo("Stopping the robot...")
-            self.cmd_vel_pub.Publish(Twist())
+            self.controller.stop()
             rospy.sleep(2)
         except:
             pass
