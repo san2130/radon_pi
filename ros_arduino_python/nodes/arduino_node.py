@@ -97,8 +97,8 @@ class ArduinoROS():
 
     
     def vel_set(self,data):
-        msg=self.controller.drive(data.linear.x,data.linear.y)
-        if(msg): print("Sent",data.linear.x, data.linear.y)
+        msg=self.controller.drive(data.linear.x,data.linear.y,data.linear.z)
+        if(msg): print("Sent",data.linear.x, data.linear.y,data.linear.z)
 
     # Service callback functions
     def ServoWriteHandler(self, req):

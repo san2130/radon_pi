@@ -107,7 +107,7 @@ class Arduino:
                         print('ERROR: {}'.format(self.port.status))
 
         rec_str_   = self.port.rx_obj(obj_type=type("a"),
-                                     obj_byte_size=20,
+                                     obj_byte_size=30,
                                      )
         # print('RCVD:',rec_str_)
         return rec_str_
@@ -169,31 +169,33 @@ class Arduino:
         '''
         return self.execute('r')[0:2]=="OK"
 
-    def drive(self, right, left):
+    def drive(self, right, left, back):
         ''' Speeds are given in encoder ticks per PID interval
         '''
         if self.motors_reversed:
-            left, right = -left, -right
-        return self.execute('m %d %d' %(right, left))[0:2]=="OK"
+            left, right, back = -left, -right, -back
+        return self.execute('m %d %d %d' %(right, left, back))[0:2]=="OK"
 
-    def drive_closed(self, right, left):
+    def drive_closed(self, right, left, back):
         ''' Set the motor speeds in meters per second.
         '''
         left_revs_per_second = float(left) / (self.wheel_diameter * PI)
         right_revs_per_second = float(right) / (self.wheel_diameter * PI)
+        back_revs_per_second = float(back) / (self.wheel_diameter * PI)
 
         left_ticks_per_loop = int(left_revs_per_second * self.encoder_resolution * self.PID_INTERVAL * self.gear_reduction)
         right_ticks_per_loop  = int(right_revs_per_second * self.encoder_resolution * self.PID_INTERVAL * self.gear_reduction)
+        back_ticks_per_loop  = int(back_revs_per_second * self.encoder_resolution * self.PID_INTERVAL * self.gear_reduction)
 
-        return self.drive(right_ticks_per_loop , left_ticks_per_loop )
+        return self.drive(right_ticks_per_loop , left_ticks_per_loop, back_ticks_per_loop )
     
-    def drive_raw(self, right, left):
-        return self.execute('o %d %d' %(right, left))[0:2] == "OK"
+    def drive_raw(self, right, left, back):
+        return self.execute('o %d %d %d' %(right, left, back))[0:2] == "OK"
 
     def stop(self):
         ''' Stop both motors.
         '''
-        msg=self.drive(0, 0)
+        msg=self.drive(0, 0, 0)
         if(msg):
             print("Stopped successfully")
 
