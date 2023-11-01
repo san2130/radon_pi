@@ -58,6 +58,8 @@ class ArduinoROS():
         # self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=5)
         self.cmd_vel_sub = rospy.Subscriber('cmd_vel', Twist, queue_size=1, callback=self.vel_set)
 
+        self.omni_vel_sub = rospy.Subscriber('omni_vel', Twist, queue_size=1, callback=self.omni_vel_set)
+
         # A service to position a PWM servo
         rospy.Service('~servo_write', ServoWrite, self.ServoWriteHandler)
 
@@ -94,12 +96,26 @@ class ArduinoROS():
         while not rospy.is_shutdown():
             # msg=self.controller.get_encoder_counts()
             # print(msg)
+            
             r.sleep()
 
     
-    def vel_set(self,data):
+    def omni_vel_set(self,data):
         msg=self.controller.drive(data.linear.x,data.linear.y,data.linear.z)
         if(msg): print("Sent",data.linear.x, data.linear.y,data.linear.z)
+
+    def vel_set(self,data):
+        vmx=data.linear.x
+        vmy=data.linear.y
+        wmp=data.angular.z
+        sqrt3by2 = 0.8660254037844385965883020617184229195117950439453125
+        L = 0.04
+        v1_left = (L * wmp - (vmx / 2) - (sqrt3by2 * vmy))
+        v2_back = (vmx + (L * wmp))
+        v3_right = (L * wmp - (vmx / 2) + (sqrt3by2 * vmy))
+        # print("left",v1_left,"back",v2_back,"right",v3_right)
+        msg = self.controller.drive(v1_left,v3_right,v2_back)
+        if(msg): print("Sent",v1_left, v3_right, v2_back)
 
     # Service callback functions
     def ServoWriteHandler(self, req):

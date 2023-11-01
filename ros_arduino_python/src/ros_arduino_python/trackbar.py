@@ -9,7 +9,7 @@ def nothing(x):
     pass
 
 rospy.init_node("trackbar_speed")
-vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+vel_pub = rospy.Publisher('omni_vel', Twist, queue_size=10)
 vel = Twist()
 # Create a black image, a window
 img = np.zeros((300,512,3), np.uint8)
