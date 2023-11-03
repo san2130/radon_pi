@@ -99,8 +99,8 @@ class ArduinoROS():
 
     
     def omni_vel_set(self,data):
-        msg=self.controller.drive_raw(data.linear.x,data.linear.y,data.linear.z)
-        if(msg): print("Sent",data.linear.x, data.linear.y,data.linear.z)
+        msg=self.controller.drive_raw(int(data.linear.x),int(data.linear.y),int(data.linear.z))
+        if(msg): print("Sent",int(data.linear.x), int(data.linear.y),int(data.linear.z))
 
     def vel_set(self,data):
         vmx=data.linear.x
@@ -112,8 +112,8 @@ class ArduinoROS():
         v2_back = (vmx + (L * wmp))
         v3_right = (L * wmp - (vmx / 2) + (sqrt3by2 * vmy))
         # print("left",v1_left,"back",v2_back,"right",v3_right)
-        msg = self.controller.drive(v1_left,v3_right,v2_back)
-        if(msg): print("Sent",v1_left, v3_right, v2_back)
+        msg = self.controller.drive(int(v1_left),int(v3_right),int(v2_back))
+        if(msg): print("Sent",int(v1_left), int(v3_right), int(v2_back))
 
     # Service callback functions
     def ServoWriteHandler(self, req):
