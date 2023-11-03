@@ -19,11 +19,11 @@ cv2.namedWindow('image')
 
 # create trackbars for color change
 
-cv2.createTrackbar('LEFT','image',0,255,nothing)
+cv2.createTrackbar('LEFT','image',0,511,nothing)
 
-cv2.createTrackbar('RIGHT','image',0,255,nothing)
+cv2.createTrackbar('RIGHT','image',0,511,nothing)
 
-cv2.createTrackbar('BACK','image',0,255,nothing)
+cv2.createTrackbar('BACK','image',0,511,nothing)
 
 
 
@@ -72,7 +72,20 @@ while(1):
 
     else:
 
-        img[:] = [b,g,r]
+        # img[:] = [b,g,r]
+        if r<256:
+            r = r*(-1)
+        else:
+            r=r-256
+        if b<256:
+            b = b*(-1)
+        else:
+            b=b-256
+        if g<256:
+            g = g*(-1)
+        else:
+            g=g-256
+        
         vel.linear.x=r
         vel.linear.y=g
         vel.linear.z=b
