@@ -99,7 +99,7 @@ class ArduinoROS():
 
     
     def omni_vel_set(self,data):
-        msg=self.controller.drive_raw(int(data.linear.x),int(data.linear.y),int(data.linear.z))
+        msg=self.controller.drive(int(data.linear.x),int(data.linear.y),int(data.linear.z))
         if(msg): print("Sent",int(data.linear.x), int(data.linear.y),int(data.linear.z))
 
     def vel_set(self,data):
