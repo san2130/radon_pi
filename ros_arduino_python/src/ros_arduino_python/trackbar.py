@@ -19,15 +19,15 @@ cv2.namedWindow('image')
 
 # create trackbars for color change
 
-cv2.createTrackbar('LEFT','image',0,255,nothing)
+cv2.createTrackbar('LEFT','image',0,3,nothing)
 
-cv2.createTrackbar('RIGHT','image',0,255,nothing)
+cv2.createTrackbar('RIGHT','image',0,3,nothing)
 
-cv2.createTrackbar('BACK','image',0,255,nothing)
+cv2.createTrackbar('BACK','image',0,3,nothing)
 
-cv2.setTrackbarMin('LEFT', 'image', -255)
-cv2.setTrackbarMin('RIGHT', 'image', -255)
-cv2.setTrackbarMin('BACK', 'image', -255)
+cv2.setTrackbarMin('LEFT', 'image', -3)
+cv2.setTrackbarMin('RIGHT', 'image', -3)
+cv2.setTrackbarMin('BACK', 'image', -3)
 
 
 

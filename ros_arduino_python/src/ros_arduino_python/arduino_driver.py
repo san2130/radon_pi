@@ -174,7 +174,7 @@ class Arduino:
         '''
         if self.motors_reversed:
             left, right, back = -left, -right, -back
-        return self.execute('m %d %d %d' %(right, left, back))[0:2]=="OK"
+        return self.execute('m %d %d %d' %(right, left, back))
 
     def drive_closed(self, right, left, back):
         ''' Set the motor speeds in meters per second.
