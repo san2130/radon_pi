@@ -43,7 +43,7 @@ class ArduinoROS():
         self.base_frame = rospy.get_param("~base_frame", 'base_link')
         self.motors_reversed = rospy.get_param("~motors_reversed", False)
         # Overall loop rate: should be faster than fastest sensor rate
-        self.rate = int(rospy.get_param("~rate", 50))
+        self.rate = int(rospy.get_param("~rate", 25))
         r = rospy.Rate(self.rate)
 
         # Set up the time for publishing the next SensorState message
@@ -104,6 +104,7 @@ class ArduinoROS():
         print(msg)
 
     def vel_set(self,data):
+        print("R")
         vmx=data.linear.x
         vmy=data.linear.y
         wmp=data.angular.z
