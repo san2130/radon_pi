@@ -113,8 +113,8 @@ class ArduinoROS():
         v2_back = (vmx + (L * wmp))
         v3_right = (L * wmp - (vmx / 2) + (sqrt3by2 * vmy))
         # print("left",v1_left,"back",v2_back,"right",v3_right)
-        msg = self.controller.drive(int(v1_left),int(v3_right),int(v2_back))
-        if(msg): print("Sent",int(v1_left), int(v3_right), int(v2_back))
+        msg = self.controller.drive(round(v1_left,2),round(v3_right,2),round(v2_back,2))
+        if(msg): print("Sent",round(v1_left,2),round(v3_right,2),round(v2_back,2))
 
     # Service callback functions
     def ServoWriteHandler(self, req):
