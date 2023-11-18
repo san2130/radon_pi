@@ -113,18 +113,18 @@ class ArduinoROS():
         v1_left = (L * wmp - (vmx / 2) - (sqrt3by2 * vmy))
         v2_back = (vmx + (L * wmp))
         v3_right = (L * wmp - (vmx / 2) + (sqrt3by2 * vmy))
-        if(abs(v1_left)<1.8):
-            v1_left=0
-        elif abs(v1_left)>2.85:
-            v1_left=v1_left/abs(v1_left)*2.85
-        if abs(v2_back)<1.8:
-            v2_back = 0
-        elif abs(v2_back)>2.85:
-            v2_back=v2_back/abs(v2_back)*2.85
-        if abs(v3_right)<1.8:
-            v3_right=0
-        elif abs(v3_right)>2.85:
-            v3_right=v3_right/abs(v3_right)*2.85
+        # if(abs(v1_left)<1.8):
+        #     v1_left=0
+        # elif abs(v1_left)>2.85:
+        #     v1_left=v1_left/abs(v1_left)*2.85
+        # if abs(v2_back)<1.8:
+        #     v2_back = 0
+        # elif abs(v2_back)>2.85:
+        #     v2_back=v2_back/abs(v2_back)*2.85
+        # if abs(v3_right)<1.8:
+        #     v3_right=0
+        # elif abs(v3_right)>2.85:
+        #     v3_right=v3_right/abs(v3_right)*2.85
         
         # print("left",v1_left,"back",v2_back,"right",v3_right)
         msg = self.controller.drive(round(v1_left,2),round(v3_right,2),round(v2_back,2))
