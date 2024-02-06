@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-    A ROS Node for the Arduino microcontroller
-
-    Created for the Pi Robot Project: http://www.pirobot.org
-    Copyright (c) 2012 Patrick Goebel.  All rights reserved.
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details at:
-
-    http://www.gnu.org/licenses/gpl.html
-"""
-
 import rospy
 from ros_arduino_python.arduino_driver import Arduino
 from ros_arduino_msgs.srv import *
@@ -40,8 +21,6 @@ class ArduinoROS():
         self.port = rospy.get_param("~port", "/dev/ttyACM0")
         self.baud = int(rospy.get_param("~baud", 57600))
         self.timeout = rospy.get_param("~timeout", 0.5)
-        self.base_frame = rospy.get_param("~base_frame", 'base_link')
-        self.motors_reversed = rospy.get_param("~motors_reversed", False)
         # Overall loop rate: should be faster than fastest sensor rate
         self.rate = int(rospy.get_param("~rate", 25))
         r = rospy.Rate(self.rate)
@@ -58,29 +37,8 @@ class ArduinoROS():
 
         self.omni_vel_sub = rospy.Subscriber('omni_vel', Twist, queue_size=1, callback=self.omni_vel_set)
 
-        # A service to position a PWM servo
-        rospy.Service('~servo_write', ServoWrite, self.ServoWriteHandler)
-
-        # A service to read the position of a PWM servo
-        rospy.Service('~servo_read', ServoRead, self.ServoReadHandler)
-
-        # A service to turn set the direction of a digital pin (0 = input, 1 = output)
-        rospy.Service('~digital_set_direction', DigitalSetDirection, self.DigitalSetDirectionHandler)
-
-        # A service to turn a digital sensor on or off
-        rospy.Service('~digital_write', DigitalWrite, self.DigitalWriteHandler)
-
-        # A service to read the value of a digital sensor
-        rospy.Service('~digital_read', DigitalRead, self.DigitalReadHandler)
-
-        # A service to set pwm values for the pins
-        rospy.Service('~analog_write', AnalogWrite, self.AnalogWriteHandler)
-
-        # A service to read the value of an analog sensor
-        rospy.Service('~analog_read', AnalogRead, self.AnalogReadHandler)
-
         # Initialize the controlller
-        self.controller = Arduino(self.port, self.baud, self.timeout, self.motors_reversed)
+        self.controller = Arduino(self.port, self.baud, self.timeout)
 
         # Make the connection
         self.controller.connect()
@@ -113,51 +71,8 @@ class ArduinoROS():
         v1_left = (L * wmp - (vmx / 2) - (sqrt3by2 * vmy))
         v2_back = (vmx + (L * wmp))
         v3_right = (L * wmp - (vmx / 2) + (sqrt3by2 * vmy))
-        # if(abs(v1_left)<1.8):
-        #     v1_left=0
-        # elif abs(v1_left)>2.85:
-        #     v1_left=v1_left/abs(v1_left)*2.85
-        # if abs(v2_back)<1.8:
-        #     v2_back = 0
-        # elif abs(v2_back)>2.85:
-        #     v2_back=v2_back/abs(v2_back)*2.85
-        # if abs(v3_right)<1.8:
-        #     v3_right=0
-        # elif abs(v3_right)>2.85:
-        #     v3_right=v3_right/abs(v3_right)*2.85
-        
-        # print("left",v1_left,"back",v2_back,"right",v3_right)
         msg = self.controller.drive(round(v1_left,2),round(v3_right,2),round(v2_back,2))
         if(msg): print("Sent",round(v1_left,2),round(v3_right,2),round(v2_back,2))
-
-    # Service callback functions
-    def ServoWriteHandler(self, req):
-        self.controller.servo_write(req.id, req.value)
-        return ServoWriteResponse()
-
-    def ServoReadHandler(self, req):
-        pos = self.controller.servo_read(req.id)
-        return ServoReadResponse(pos)
-
-    def DigitalSetDirectionHandler(self, req):
-        self.controller.pin_mode(req.pin, req.direction)
-        return DigitalSetDirectionResponse()
-
-    def DigitalWriteHandler(self, req):
-        self.controller.digital_write(req.pin, req.value)
-        return DigitalWriteResponse()
-
-    def DigitalReadHandler(self, req):
-        value = self.controller.digital_read(req.pin)
-        return DigitalReadResponse(value)
-
-    def AnalogWriteHandler(self, req):
-        self.controller.analog_write(req.pin, req.value)
-        return AnalogWriteResponse()
-
-    def AnalogReadHandler(self, req):
-        value = self.controller.analog_read(req.pin)
-        return AnalogReadResponse(value)
 
     def shutdown(self):
         rospy.loginfo("Shutting down Arduino Node...")

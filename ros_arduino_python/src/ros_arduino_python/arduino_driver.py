@@ -1,26 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-    A Python driver for the Arduino microcontroller running the
-    ROSArduinoBridge firmware.
-
-    Created for the Pi Robot Project: http://www.pirobot.org
-    Copyright (c) 2012 Patrick Goebel.  All rights reserved.
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details at:
-
-    http://www.gnu.org/licenses/gpl.html
-
-"""
-
 import _thread
 from math import pi as PI, degrees, radians
 import os
@@ -30,14 +9,7 @@ from serial.serialutil import SerialException
 from serial import Serial
 from pySerialTransfer import pySerialTransfer as txfer
 
-SERVO_MAX = 180
-SERVO_MIN = 0
-
 class Arduino:
-    ''' Configuration Parameters
-    '''
-    N_ANALOG_PORTS = 6
-    N_DIGITAL_PORTS = 12
 
     def __init__(self, port="/dev/ttyACM0", baudrate=57600, timeout=0.5, motors_reversed=False):
 
@@ -51,14 +23,8 @@ class Arduino:
         self.writeTimeout = timeout
         self.interCharTimeout = timeout / 30.
         self.motors_reversed = motors_reversed
-        # Keep things _thread safe
+
         self.mutex = _thread.allocate_lock()
-
-        # An array to cache analog sensor readings
-        self.analog_sensor_cache = [None] * self.N_ANALOG_PORTS
-
-        # An array to cache digital sensor readings
-        self.digital_sensor_cache = [None] * self.N_DIGITAL_PORTS
 
     def connect(self):
         try:
@@ -198,37 +164,3 @@ class Arduino:
         msg=self.drive(0, 0, 0)
         if(msg):
             print("Stopped successfully")
-
-    def analog_read(self, pin):
-        return self.execute('a %d' %pin)
-
-    def analog_write(self, pin, value):
-        return self.execute_ack('x %d %d' %(pin, value))
-
-    def digital_read(self, pin):
-        return self.execute('d %d' %pin)
-
-    def digital_write(self, pin, value):
-        return self.execute_ack('w %d %d' %(pin, value))
-
-    def pin_mode(self, pin, mode):
-        return self.execute_ack('c %d %d' %(pin, mode))
-
-    def servo_write(self, id, pos):
-        ''' Usage: servo_write(id, pos)
-            Position is given in radians and converted to degrees before sending
-        '''
-        return self.execute_ack('s %d %d' %(id, min(SERVO_MAX, max(SERVO_MIN, degrees(pos)))))
-
-    def servo_read(self, id):
-        ''' Usage: servo_read(id)
-            The returned position is converted from degrees to radians
-        '''
-        return radians(self.execute('t %d' %id))
-
-    def ping(self, pin):
-        ''' The srf05/Ping command queries an SRF05/Ping sonar sensor
-            connected to the General Purpose I/O line pinId for a distance,
-            and returns the range in cm.  Sonar distance resolution is integer based.
-        '''
-        return self.execute('p %d' %pin)
