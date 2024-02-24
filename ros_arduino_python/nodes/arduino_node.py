@@ -32,7 +32,6 @@ class ArduinoROS():
 
         # A cmd_vel publisher so we can stop the robot when shutting down
         # self.cmd_vel_pub = rospy.Publisher('cmd_vel', Twist, queue_size=5)
-        self.cmd_vel_sub = rospy.Subscriber('cmd_vel', Twist, queue_size=1, callback=self.vel_set)
 
         self.omni_vel_sub = rospy.Subscriber('omni_vel', Twist, queue_size=1, callback=self.omni_vel_set)
 
@@ -56,22 +55,9 @@ class ArduinoROS():
 
     
     def omni_vel_set(self,data):
-        msg=self.controller.drive(float(data.linear.x),float(data.linear.y),float(data.linear.z))
-        print("Sent",float(data.linear.x), float(data.linear.y),float(data.linear.z))
+        msg=self.controller.drive(float(data.linear.x),float(data.linear.y))
+        print("Sent",float(data.linear.x), float(data.linear.y))
         print(msg)
-
-    def vel_set(self,data):
-        print("R")
-        vmx=data.linear.x
-        vmy=data.linear.y
-        wmp=data.angular.z
-        sqrt3by2 = 0.8660254037844385965883020617184229195117950439453125
-        L = 0.04
-        v1_left = (L * wmp - (vmx / 2) - (sqrt3by2 * vmy))
-        v2_back = (vmx + (L * wmp))
-        v3_right = (L * wmp - (vmx / 2) + (sqrt3by2 * vmy))
-        msg = self.controller.drive(round(v1_left,2),round(v3_right,2),round(v2_back,2))
-        if(msg): print("Sent",round(v1_left,2),round(v3_right,2),round(v2_back,2))
 
     def shutdown(self):
         rospy.loginfo("Shutting down Arduino Node...")

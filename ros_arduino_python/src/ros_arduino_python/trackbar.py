@@ -23,11 +23,8 @@ cv2.createTrackbar('LEFT','image',0,3,nothing)
 
 cv2.createTrackbar('RIGHT','image',0,3,nothing)
 
-cv2.createTrackbar('BACK','image',0,3,nothing)
-
 cv2.setTrackbarMin('LEFT', 'image', -3)
 cv2.setTrackbarMin('RIGHT', 'image', -3)
-cv2.setTrackbarMin('BACK', 'image', -3)
 
 
 
@@ -60,8 +57,6 @@ while(1):
 
     g = cv2.getTrackbarPos('RIGHT','image')
 
-    b = cv2.getTrackbarPos('BACK','image')
-
     s = cv2.getTrackbarPos(switch,'image')
 
 
@@ -77,7 +72,7 @@ while(1):
     else:
         vel.linear.x=r
         vel.linear.y=g
-        vel.linear.z=b
+        vel.linear.z=0
 
     vel_pub.publish(vel)
 
